@@ -22,7 +22,7 @@ python server.py
 ### 前端展示（Caddy极速飞车）
 ```bash
 请确保已经安装Caddy（没有的话先 brew install caddy 或 choco install caddy）
-caddy --file-server ./ --listen:80
+caddy file-server --root ./ --listen :80 
 ```
 
 ## 🎮 使用指南

@@ -189,6 +189,155 @@
             overflow-x: auto;
             border-radius: 6px;
         }
+
+        /* Markdown内容容器 */
+        .markdown-content {
+            /* 定位与尺寸 */
+            position: fixed;
+            height: 95vh;
+            /* 容器样式 */
+            padding: 2rem 3rem;
+            overflow-y: auto;
+            background: #ffffff;
+            
+            /* 移除不需要的样式 */
+            box-shadow: none;
+            border-radius: 0;
+            margin: 0;
+            
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge */
+        }
+
+
+        /* 滚动条滑块 */
+        .markdown-content::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 4px;
+        border: 2px solid #f5f5f5;
+        }
+
+        .markdown-content::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+        }
+
+        /* 标题系统 */
+        .markdown-content h1 {
+        font-size: 2.2em;
+        font-weight: 600;
+        color: #1a1a1a;
+        border-bottom: 2px solid #e5e5e5;
+        padding-bottom: 0.5em;
+        margin: 1.5em 0 1em;
+        }
+
+        .markdown-content h2 {
+        font-size: 1.8em;
+        font-weight: 500;
+        color: #2d2d2d;
+        border-bottom: 1px solid #e5e5e5;
+        padding-bottom: 0.4em;
+        margin: 1.2em 0 0.8em;
+        }
+
+        .markdown-content h3 {
+        font-size: 1.5em;
+        color: #3a3a3a;
+        margin: 1em 0 0.6em;
+        }
+
+        /* 文字段落 */
+        .markdown-content p {
+        line-height: 1.8;
+        color: #4a4a4a;
+        margin: 1em 0;
+        }
+
+        /* 列表样式 */
+        .markdown-content ul,
+        .markdown-content ol {
+        padding-left: 1.5em;
+        margin: 1em 0;
+        }
+
+        .markdown-content li {
+        margin: 0.5em 0;
+        line-height: 1.7;
+        }
+
+        /* 代码块 */
+        .markdown-content pre {
+        background: #f8f8f8 !important;
+        padding: 1.5rem !important;
+        border-radius: 8px;
+        border: 1px solid #e5e5e5;
+        margin: 1.5em 0;
+        overflow-x: auto;
+        }
+
+        .markdown-content code {
+        font-family: 'Fira Code', monospace;
+        font-size: 0.9em;
+        padding: 0.2em 0.4em;
+        border-radius: 4px;
+        }
+
+        /* 表格美化 */
+        .markdown-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 2em 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .markdown-content th {
+        background: #f8f9fa;
+        font-weight: 600;
+        padding: 12px;
+        text-align: left;
+        border-bottom: 2px solid #e5e5e5;
+        }
+
+        .markdown-content td {
+        padding: 12px;
+        border-bottom: 1px solid #e5e5e5;
+        }
+
+        /* 引用块 */
+        .markdown-content blockquote {
+        border-left: 4px solid #007bff;
+        background: #f8f9fa;
+        color: #5a5a5a;
+        padding: 1em 1.5em;
+        margin: 1.5em 0;
+        border-radius: 4px;
+        }
+
+        /* 图片优化 */
+        .markdown-content img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        margin: 1.5em 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* 响应式优化 */
+        @media (max-width: 768px) {
+        .markdown-content {
+            padding: 1.5rem;
+            border-radius: 0;
+            height: calc(100vh - 90px);
+        }
+        
+        .markdown-content h1 {
+            font-size: 1.8em;
+        }
+        
+        .markdown-content h2 {
+            font-size: 1.5em;
+        }
+        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -224,12 +373,12 @@
                     <i class="fas fa-home mr-1"></i>根目录
                 </div>
             </div>
-            <div id="content" class="flex-1 p-6  w-full max-w-none markdown-body" style="background-color: #F5F2F0;"></div>
+            <div id="content" class="flex-1 p-6  w-full max-w-none markdown-body" style="background-color: #ffffff;"></div>
         </div>
     </div>
 <script>
 // 配置变量
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://hgston.cn:5000';
 let currentFile = null;
 let currentPath = '';
 const folderState = {};
@@ -496,7 +645,11 @@ function renderFileContent(path, content) {
     $content.innerHTML = '';
 
     if (ext === 'md') {
-        $content.innerHTML = marked.parse(content);
+        $content.innerHTML = `
+            <div class="markdown-body markdown-content">
+                ${marked.parse(content)}
+            </div>
+        `;
     } else {
         const codeClass = getPrismLanguage(ext);
         // 确保创建有效的DOM结构

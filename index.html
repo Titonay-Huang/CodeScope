@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Code Reader - flvw.hgston.cn</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Prism.js 主题和核心 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+    <!-- Prism.js 语言支持 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-vue.min.js"></script>
+    <!-- 自动加载器 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/autoloader/prism-autoloader.min.js"></script>
+    <!-- 行号插件 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <!-- Font Awesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Marked 解析 Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* 文件树样式 */
+        .folder-toggle {
+            width: 14px;
+            height: 14px;
+            margin-right: 4px;
+        }
+        .folder-toggle::before {
+            content: '❯';
+            font-size: 0.65em;
+            transition: transform 0.2s;
+        }
+        .folder-toggle.folder-open::before {
+            transform: rotate(90deg);
+        }
+        /* 侧边栏样式 */
+        #sidebar {
+            position: relative;
+            width: 16rem;
+            transition: all 0.3s ease;
+            overflow: visible;
+        }
+        #sidebar.collapsed {
+            width: 24px;
+            min-width: 24px;
+            padding: 0;
+        }
+        /* 切换按钮 */
+        #toggleSidebar {
+            position: absolute;
+            right: -12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+            border: 1px solid #e5e7eb;
+            transition: all 0.3s;
+        }
+        #toggleSidebar:hover {
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 3px 12px rgba(0,0,0,0.2);
+        }
+        #toggleSidebar svg {
+            width: 14px;
+            height: 14px;
+            transition: transform 0.3s;
+        }
+        #sidebar.collapsed #toggleSidebar {
+            right: -8px;
+            transform: translateY(-50%) rotate(180deg);
+        }
+        #sidebar.collapsed #toggleSidebar:hover {
+            transform: translateY(-50%) rotate(180deg) scale(1.1);
+        }
+        /* 内容区域 */
+        #content {
+            padding: 0;
+        }
+        pre[class*=language-] {
+            padding: 1em;
+            margin: 0;
+            overflow: auto;
+            height: calc(100vh - 40px);
+        }
+        #sidebar .p-4 {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        #sidebar.collapsed .p-4 {
+            opacity: 0;
+            visibility: hidden;
+            transform: translateX(-100%);
+            pointer-events: none;
+        }
+        /* 文件树项容器 */
+        .flex.items-center {
+            align-items: center;
+            height: 24px;
+        }
+        .folder-toggle {
+            width: 14px;
+            height: 14px;
+            margin-right: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .file-placeholder {
+            width: 14px;
+            height: 14px;
+            margin-right: 4px;
+            display: inline-block;
+        }
+        .text-sm {
+            line-height: 1.5;
+            vertical-align: middle;
+            font-size: 13px;
+            transform: translateY(1px);
+        }
+        /* 面包屑导航 */
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            background-color: #f3f4f6;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .breadcrumb-item {
+            display: flex;
+            align-items: center;
+            color: #4b5563;
+            font-size: 14px;
+        }
+        .breadcrumb-item:hover {
+            color: #3b82f6;
+        }
+        .breadcrumb-separator {
+            margin: 0 8px;
+            color: #9ca3af;
+        }
+        /* 搜索框 */
+        #search-input {
+            padding: 6px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            width: 100%;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        /* 活动文件高亮 */
+        .file-item.active {
+            background-color: #e0f2fe;
+        }
+        /* 文件图标 */
+        .file-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* Markdown 样式 */
+        .markdown-body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            font-size: 17px;
+            line-height: 1.6;
+            color: #24292e;
+            padding: 1em;
+        }
+        .markdown-body h1, .markdown-body h2 {
+            border-bottom: 1px solid #eaecef;
+            padding-bottom: 0.3em;
+            margin-top: 2em;
+            margin-bottom: 1em;
+        }
+        .markdown-body pre {
+            padding: 1em;
+            overflow-x: auto;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="flex h-screen">
+        <!-- 左侧边栏 -->
+        <div id="sidebar" class="bg-white shadow-lg overflow-y-auto transition-all">
+            <div class="p-4">
+                <input type="file" id="upload" webkitdirectory directory multiple class="hidden">
+                <div class="flex gap-2 mb-4">
+                    <button onclick="document.getElementById('upload').click()" 
+                            class="flex-1 bg-[#478de8] text-white px-4 py-2 rounded-lg hover:bg-[#3a7ac7] transition">
+                        <i class="fas fa-upload mr-2"></i>上传
+                    </button>
+                    <button onclick="downloadFile()" 
+                            class="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
+                            id="downloadBtn">
+                        <i class="fas fa-download mr-2"></i>下载
+                    </button>
+                </div>
+                <input type="text" id="search-input" placeholder="搜索文件..." oninput="searchFiles()">
+                <div id="file-tree" class="text-gray-700"></div>
+            </div>
+            <button id="toggleSidebar" onclick="toggleSidebar()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M9 18l6-6-6-6" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
+        </div>
+        <!-- 右侧内容区 -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <div id="breadcrumb" class="breadcrumb">
+                <div class="breadcrumb-item cursor-pointer" onclick="navigateToRoot()">
+                    <i class="fas fa-home mr-1"></i>根目录
+                </div>
+            </div>
+            <div id="content" class="flex-1 p-6  w-full max-w-none markdown-body" style="background-color: #F5F2F0;"></div>
+        </div>
+    </div>
+<script>
+// 配置变量
+const API_BASE_URL = 'http://localhost:5000';
+let currentFile = null;
+let currentPath = '';
+const folderState = {};
+
+// 侧边栏切换
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('collapsed');
+    localStorage.setItem('sidebarState', sidebar.classList.contains('collapsed') ? 'collapsed' : 'expanded');
+}
+
+// 初始化侧边栏状态
+document.addEventListener('DOMContentLoaded', () => {
+    if (localStorage.getItem('sidebarState') === 'collapsed') {
+        document.getElementById('sidebar').classList.add('collapsed');
+    }
+    loadFileTree();
+    updateBreadcrumb();
+});
+
+// 文件上传处理
+document.getElementById('upload').addEventListener('change', async (e) => {
+    const files = e.target.files;
+    if (!files.length) return;
+    const btn = document.querySelector('button[onclick*="upload"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>上传中...';
+    btn.disabled = true;
+    try {
+        const formData = new FormData();
+        [...files].forEach(file => {
+            formData.append(file.webkitRelativePath || file.name, file);
+        });
+        const res = await fetch(`${API_BASE_URL}/upload`, {
+            method: 'POST',
+            body: formData
+        });
+        if (!res.ok) throw new Error(await res.text());
+        await loadFileTree();
+    } catch (error) {
+        alert(error.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+});
+
+// 文件树相关函数
+async function loadFileTree() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/files`);
+        const tree = await res.json();
+        document.getElementById('file-tree').innerHTML = buildTreeHtml(tree);
+    } catch (error) {
+        console.error('加载文件树失败:', error);
+    }
+}
+
+async function downloadFile() {
+    if (!currentFile) {
+        alert('请先选择要下载的文件');
+        return;
+    }
+    if (currentFile.endsWith('/')) {
+        alert('无法下载文件夹');
+        return;
+    }
+    try {
+        window.open(`${API_BASE_URL}/download?path=${encodeURIComponent(currentFile)}`);
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
+function getFileIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const icons = {
+        // 代码文件
+        'js': 'fa-file-code',
+        'ts': 'fa-file-code',
+        'py': 'fa-file-code',
+        'java': 'fa-file-code',
+        'c': 'fa-file-code',
+        'cpp': 'fa-file-code',
+        'h': 'fa-file-code',
+        'cs': 'fa-file-code',
+        'go': 'fa-file-code',
+        'php': 'fa-file-code',
+        'rb': 'fa-file-code',
+        'swift': 'fa-file-code',
+        'kt': 'fa-file-code',
+        // 标记语言
+        'html': 'fa-file-code',
+        'htm': 'fa-file-code',
+        'css': 'fa-file-code',
+        'scss': 'fa-file-code',
+        'less': 'fa-file-code',
+        'json': 'fa-file-code',
+        'xml': 'fa-file-code',
+        'yml': 'fa-file-code',
+        'yaml': 'fa-file-code',
+        'md': 'fa-file-alt',
+        // 配置文件
+        'env': 'fa-cog',
+        'gitignore': 'fa-cog',
+        'dockerfile': 'fa-cog',
+        // 文档
+        'txt': 'fa-file-alt',
+        'pdf': 'fa-file-pdf',
+        'doc': 'fa-file-word',
+        'docx': 'fa-file-word',
+        'xls': 'fa-file-excel',
+        'xlsx': 'fa-file-excel',
+        'ppt': 'fa-file-powerpoint',
+        'pptx': 'fa-file-powerpoint',
+        // 图片
+        'jpg': 'fa-file-image',
+        'jpeg': 'fa-file-image',
+        'png': 'fa-file-image',
+        'gif': 'fa-file-image',
+        'svg': 'fa-file-image',
+        'bmp': 'fa-file-image',
+        // 压缩文件
+        'zip': 'fa-file-archive',
+        'rar': 'fa-file-archive',
+        '7z': 'fa-file-archive',
+        'tar': 'fa-file-archive',
+        'gz': 'fa-file-archive',
+    };
+    return icons[ext] || 'fa-file';
+}
+
+function buildTreeHtml(items, level = 0, parentPath = '') {
+    return items.map(item => {
+        const isFolder = item.type === 'folder';
+        const fullPath = parentPath ? `${parentPath}/${item.name}` : item.name;
+        const isOpen = folderState[fullPath];
+        const isActive = currentFile === item.path;
+        return `
+            <div class="pl-${level * 4}">
+                <div class="flex items-center py-1 hover:bg-gray-100 rounded cursor-pointer file-item ${isActive ? 'active' : ''}"
+                    onclick="${isFolder ? `toggleFolder('${fullPath}')` : `loadFile('${item.path}', '${fullPath}')`}">
+                    ${isFolder ? 
+                        `<span class="folder-toggle ${isOpen ? 'folder-open' : ''}"></span>` : 
+                        '<span class="file-placeholder"></span>'}
+                    <i class="file-icon ${isFolder ? 'fas fa-folder text-yellow-500' : 'fas ' + getFileIcon(item.name)} ${isFolder ? '' : 'text-blue-500'}"></i>
+                    <span class="ml-1 text-sm truncate" title="${item.name}">${item.name}</span>
+                </div>
+                ${isFolder && isOpen ? `
+                    <div class="folder-children">
+                        ${buildTreeHtml(item.children, level + 1, fullPath)}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+function toggleFolder(path) {
+    folderState[path] = !folderState[path];
+    loadFileTree();
+    event.stopPropagation();
+}
+
+// 文件搜索
+function searchFiles() {
+    const searchTerm = document.getElementById('search-input').value.toLowerCase();
+    if (!searchTerm) {
+        loadFileTree();
+        return;
+    }
+    fetch(`${API_BASE_URL}/files`)
+        .then(res => res.json())
+        .then(tree => {
+            const filteredTree = filterTree(tree, searchTerm);
+            document.getElementById('file-tree').innerHTML = buildTreeHtml(filteredTree);
+        });
+}
+
+function filterTree(items, searchTerm) {
+    return items.filter(item => {
+        if (item.type === 'folder') {
+            const filteredChildren = filterTree(item.children, searchTerm);
+            if (filteredChildren.length > 0) {
+                item.children = filteredChildren;
+                return true;
+            }
+        }
+        return item.name.toLowerCase().includes(searchTerm);
+    });
+}
+
+// 面包屑导航
+function updateBreadcrumb() {
+    if (!currentPath) {
+        document.getElementById('breadcrumb').innerHTML = `
+            <div class="breadcrumb-item cursor-pointer" onclick="navigateToRoot()">
+                <i class="fas fa-home mr-1"></i>根目录
+            </div>
+        `;
+        return;
+    }
+    const parts = currentPath.split('/');
+    let breadcrumbHtml = `
+        <div class="breadcrumb-item cursor-pointer" onclick="navigateToRoot()">
+            <i class="fas fa-home mr-1"></i>根目录
+        </div>
+    `;
+    let currentPartPath = '';
+    parts.forEach((part, index) => {
+        if (!part) return;
+        currentPartPath += (currentPartPath ? '/' : '') + part;
+        const isLast = index === parts.length - 1;
+        breadcrumbHtml += `
+            <div class="breadcrumb-separator">/</div>
+            <div class="breadcrumb-item ${isLast ? 'font-medium text-blue-600' : 'cursor-pointer'}" 
+                 ${isLast ? '' : `onclick="navigateToPath('${currentPartPath}')"`}>
+                ${part}
+            </div>
+        `;
+    });
+    document.getElementById('breadcrumb').innerHTML = breadcrumbHtml;
+}
+
+function navigateToPath(path) {
+    currentPath = path;
+    updateBreadcrumb();
+    // 这里可以添加加载该路径下内容的逻辑
+}
+
+function navigateToRoot() {
+    currentPath = '';
+    updateBreadcrumb();
+    // 这里可以添加加载根目录内容的逻辑
+}
+
+// 文件加载
+async function loadFile(path, displayPath = '') {
+    path = path.replace(/[\x00-\x1F\x7F]/g, '').trim();
+    currentFile = path;
+    currentPath = displayPath || path;
+    updateBreadcrumb();
+    
+    document.querySelectorAll('.file-item').forEach(el => el.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    
+    try {
+        const encodedPath = encodeURIComponent(path);
+        const res = await fetch(`${API_BASE_URL}/file?path=${encodedPath}`);
+        if (!res.ok) throw new Error(await res.text());
+        const content = await res.text();
+        renderFileContent(path, content);
+    } catch (error) {
+        console.error('加载文件失败:', error);
+        showError(`加载文件失败: ${error.message}`);
+    }
+}
+
+function renderFileContent(path, content) {
+    const $content = document.getElementById('content');
+    const ext = path.split('.').pop().toLowerCase();
+
+    // 先清空内容
+    $content.innerHTML = '';
+
+    if (ext === 'md') {
+        $content.innerHTML = marked.parse(content);
+    } else {
+        const codeClass = getPrismLanguage(ext);
+        // 确保创建有效的DOM结构
+        const pre = document.createElement('pre');
+        const code = document.createElement('code');
+        
+        pre.className = `line-numbers language-${codeClass}`;
+        code.className = `language-${codeClass}`;
+        code.textContent = content;
+        
+        pre.appendChild(code);
+        $content.appendChild(pre);
+
+        // 延迟执行确保DOM更新完成
+        setTimeout(() => {
+            Prism.highlightElement(code);
+            if (Prism.plugins.lineNumbers) {
+                Prism.plugins.lineNumbers.resize();
+            }
+        }, 0);
+    }
+}
+
+function getPrismLanguage(ext) {
+    const languageMap = {
+        'js': 'javascript',
+        'jsx': 'javascript',
+        'ts': 'typescript',
+        'tsx': 'typescript',
+        'vue': 'vue',
+        'html': 'html',
+        'css': 'css',
+        'scss': 'scss',
+        'less': 'less',
+        'py': 'python',
+        'java': 'java',
+        'c': 'c',
+        'cpp': 'cpp',
+        'go': 'go',
+        'php': 'php',
+        'rb': 'ruby',
+        'swift': 'swift',
+        'kt': 'kotlin',
+        'rs': 'rust',
+        'sql': 'sql',
+        'sh': 'bash'
+    };
+    return languageMap[ext] || 'none';
+}
+
+function showError(message) {
+    document.getElementById('content').innerHTML = `
+        <div class="p-4 text-red-500">
+            <i class="fas fa-exclamation-circle mr-2"></i>${message}
+        </div>
+    `;
+}
+
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 配置Prism自动加载
+    Prism.plugins.autoloader.languages_path = 
+        'https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/';
+    
+    // 安全检测插件是否存在
+    if (Prism.plugins.lineNumbers) {
+        Prism.plugins.lineNumbers.resize();
+    }
+});
+</script>
+</body>
+</html>

@@ -58,7 +58,7 @@ sudo kill -9 <PID>  # 请小心使用这个咒语！
 ```
 
 ## 📜 开源协议
-MIT Licensed | © 2023 [你的名字]  
+MIT Licensed | © 2025 [Titonay Huang]  
 Made with ❤️ 和 ☕ 的完美配方
 
 ---

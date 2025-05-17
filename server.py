@@ -126,21 +126,32 @@ def upload():
     
 @app.route('/download')
 def download_file():
-    file_path = request.args.get('path')
+    path = request.args.get('path')
+    if not path:
+        return 'Path parameter is required', 400
     
-    # 安全验证
-    if not file_path or not file_path.startswith(UPLOAD_FOLDER):
-        return 'Invalid file path', 400
-        
-    if not os.path.isfile(file_path):
-        return 'Path is not a file', 400
+    # 清理路径中的非法字符
+    path = re.sub(r'[\x00-\x1F\x7F]', '', path).strip()
+    
+    try:
+        # 转换为绝对路径
+        abs_path = os.path.abspath(os.path.join(UPLOAD_FOLDER, path))
+    except Exception as e:
+        return f'Invalid path: {str(e)}', 400
+    
+    # 验证路径是否在UPLOAD_FOLDER下（防止路径遍历）
+    if not abs_path.startswith(os.path.abspath(UPLOAD_FOLDER)):
+        return 'Access denied', 403
+    
+    if not os.path.isfile(abs_path):
+        return 'File not found', 404
     
     # 获取原始文件名
-    filename = os.path.basename(file_path)
+    filename = os.path.basename(abs_path)
     
     try:
         return send_file(
-            file_path,
+            abs_path,
             as_attachment=True,
             download_name=filename
         )

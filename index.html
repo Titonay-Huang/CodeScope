@@ -41,6 +41,8 @@
             width: 16rem;
             transition: all 0.3s ease;
             overflow: visible;
+            background-color: #f3f4f6;
+            border-right: 1px solid #e5e7eb;
         }
         #sidebar.collapsed {
             width: 24px;
@@ -442,11 +444,8 @@ async function downloadFile() {
         alert('请先选择要下载的文件');
         return;
     }
-    if (currentFile.endsWith('/')) {
-        alert('无法下载文件夹');
-        return;
-    }
     try {
+        // 直接使用currentFile作为相对路径
         window.open(`${API_BASE_URL}/download?path=${encodeURIComponent(currentFile)}`);
     } catch (error) {
         alert(error.message);
